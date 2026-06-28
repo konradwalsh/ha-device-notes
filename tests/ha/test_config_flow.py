@@ -46,3 +46,38 @@ async def test_options_flow_opts_in_device_and_creates_entities(hass):
         if e.platform == DOMAIN
     ]
     assert {e.domain for e in ours} == {"sensor", "text"}
+
+
+async def test_de_opting_a_device_removes_its_entities(hass):
+    cfg = MockConfigEntry(domain="demo")
+    cfg.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=cfg.entry_id, identifiers={("demo", "z")}, name="Z Device"
+    )
+    entry = MockConfigEntry(
+        domain=DOMAIN, options={CONF_DEVICES: [device.id], CONF_AREAS: []}
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    ent_reg = er.async_get(hass)
+
+    def _ours():
+        return [
+            e
+            for e in er.async_entries_for_device(
+                ent_reg, device.id, include_disabled_entities=True
+            )
+            if e.platform == DOMAIN
+        ]
+
+    assert _ours()  # entities created while opted in
+
+    # remove the device from the opt-in -> update listener reloads the entry
+    hass.config_entries.async_update_entry(
+        entry, options={CONF_DEVICES: [], CONF_AREAS: []}
+    )
+    await hass.async_block_till_done()
+
+    assert not _ours()  # stale entities reconciled away

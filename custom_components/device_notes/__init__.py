@@ -56,6 +56,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _async_register_card(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Remove entities/device links for devices that are no longer opted in.
+    _async_reconcile_entities(hass, entry)
+
     # Reload when the opt-in selection changes so entities are added/removed.
     entry.async_on_unload(entry.add_update_listener(_async_reload_on_update))
 
@@ -68,6 +71,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_reload_on_update(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the entry when its options (opted-in devices/areas) change."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_reconcile_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Drop entities + device links for devices no longer opted in.
+
+    Notes are intentionally left in the Store, so re-adding a device restores
+    its log (re-linked by identifiers).
+    """
+    from homeassistant.helpers import device_registry as dr
+    from homeassistant.helpers import entity_registry as er
+
+    from .selection import effective_device_ids
+
+    keep = effective_device_ids(hass, entry)
+
+    ent_reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if ent.device_id not in keep:
+            ent_reg.async_remove(ent.entity_id)
+            _LOGGER.debug("Removed de-opted entity %s", ent.entity_id)
+
+    dev_reg = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+        if device.id not in keep:
+            dev_reg.async_update_device(
+                device.id, remove_config_entry_id=entry.entry_id
+            )
+            _LOGGER.debug("Detached from de-opted device %s", device.id)
 
 
 async def _async_register_card(hass: HomeAssistant) -> None:
