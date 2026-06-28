@@ -1,0 +1,115 @@
+"""Service handlers — the agent-facing surface.
+
+Each service accepts EITHER ``device_id`` OR any ``entity_id`` on the target
+device (resolved to its device). All note/log mechanics live in the pure
+``notelog``/``model`` modules; these handlers only resolve the target, stamp the
+timestamp/source, and delegate to the Store.
+"""
+
+from __future__ import annotations
+
+import logging
+
+import voluptuous as vol
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
+
+from . import notelog
+from .const import (
+    ATTR_DEVICE_ID,
+    ATTR_ENTITY_ID,
+    ATTR_NOTE,
+    ATTR_SOURCE,
+    DOMAIN,
+    SERVICE_APPEND,
+    SERVICE_CLEAR,
+    SERVICE_DELETE_LAST,
+    SOURCE_AGENT,
+)
+from .store import DeviceNotesStore
+
+_LOGGER = logging.getLogger(__name__)
+
+_TARGET_FIELDS = {
+    vol.Optional(ATTR_DEVICE_ID): cv.string,
+    vol.Optional(ATTR_ENTITY_ID): cv.entity_id,
+}
+TARGET_SCHEMA = vol.Schema(_TARGET_FIELDS)
+APPEND_SCHEMA = vol.Schema(
+    {
+        **_TARGET_FIELDS,
+        vol.Required(ATTR_NOTE): cv.string,
+        vol.Optional(ATTR_SOURCE): cv.string,
+    }
+)
+
+
+def _resolve_device_id(hass: HomeAssistant, data: dict) -> str:
+    """Resolve a target device_id from a device_id or any entity_id on it."""
+    if device_id := data.get(ATTR_DEVICE_ID):
+        return device_id
+    if entity_id := data.get(ATTR_ENTITY_ID):
+        entity = er.async_get(hass).async_get(entity_id)
+        if entity is None:
+            raise ServiceValidationError(f"Entity {entity_id} not found")
+        if entity.device_id is None:
+            raise ServiceValidationError(
+                f"Entity {entity_id} is not attached to a device"
+            )
+        return entity.device_id
+    raise ServiceValidationError("Provide either device_id or entity_id")
+
+
+async def async_setup_services(hass: HomeAssistant, store: DeviceNotesStore) -> None:
+    """Register the device_notes services, closing over the shared Store."""
+
+    async def _append(call: ServiceCall) -> None:
+        device_id = _resolve_device_id(hass, call.data)
+        device = dr.async_get(hass).async_get(device_id)
+        if device is None:
+            raise ServiceValidationError(f"Device {device_id} not found")
+        source = call.data.get(ATTR_SOURCE) or SOURCE_AGENT
+        ts = dt_util.now().isoformat(timespec="seconds")
+        entry = notelog.make_entry(call.data[ATTR_NOTE], source=source, ts=ts)
+        await store.async_append(
+            device_id=device_id,
+            identifiers=device.identifiers,
+            name=device.name_by_user or device.name,
+            entry=entry,
+        )
+        _LOGGER.debug("Service append: device=%s source=%s", device_id, source)
+
+    async def _clear(call: ServiceCall) -> None:
+        device_id = _resolve_device_id(hass, call.data)
+        key = store.key_for_device_id(device_id)
+        if key is None:
+            _LOGGER.warning(
+                "Service clear: device %s has no notes; nothing to clear", device_id
+            )
+            return
+        await store.async_clear(key)
+
+    async def _delete_last(call: ServiceCall) -> None:
+        device_id = _resolve_device_id(hass, call.data)
+        key = store.key_for_device_id(device_id)
+        if key is None:
+            _LOGGER.warning("Service delete_last: device %s has no notes", device_id)
+            return
+        await store.async_delete_last(key)
+
+    hass.services.async_register(DOMAIN, SERVICE_APPEND, _append, schema=APPEND_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_CLEAR, _clear, schema=TARGET_SCHEMA)
+    hass.services.async_register(
+        DOMAIN, SERVICE_DELETE_LAST, _delete_last, schema=TARGET_SCHEMA
+    )
+    _LOGGER.debug("Registered device_notes services")
+
+
+def async_unload_services(hass: HomeAssistant) -> None:
+    """Remove the device_notes services."""
+    for service in (SERVICE_APPEND, SERVICE_CLEAR, SERVICE_DELETE_LAST):
+        hass.services.async_remove(DOMAIN, service)

@@ -1,0 +1,44 @@
+"""Constants for the Device Notes integration."""
+
+from __future__ import annotations
+
+DOMAIN = "device_notes"
+
+# --- Config / options keys ------------------------------------------------
+CONF_DEVICES = "devices"
+CONF_AREAS = "areas"
+
+# --- Storage --------------------------------------------------------------
+STORAGE_VERSION = 1
+STORAGE_KEY = "device_notes"
+
+# --- Log entry shape: {"ts": <iso8601>, "source": <str>, "text": <str>} ---
+ATTR_TS = "ts"
+ATTR_SOURCE = "source"
+ATTR_TEXT = "text"
+ATTR_LOG = "log"
+
+# --- Sources --------------------------------------------------------------
+SOURCE_USER = "user"
+SOURCE_AGENT = "agent"
+
+# --- Service names --------------------------------------------------------
+SERVICE_APPEND = "append"
+SERVICE_CLEAR = "clear"
+SERVICE_DELETE_LAST = "delete_last"
+
+# --- Service fields -------------------------------------------------------
+ATTR_DEVICE_ID = "device_id"
+ATTR_ENTITY_ID = "entity_id"
+ATTR_NOTE = "note"
+
+# --- Guardrails -----------------------------------------------------------
+MAX_ENTRIES = 50  # keep the newest N entries
+MAX_LOG_BYTES = 8 * 1024  # prune oldest beyond ~8 KB total
+MAX_ENTRY_CHARS = 255  # HA text entity hard limit, one line per entry
+MAX_STATE_CHARS = 255  # HA state-string hard limit (sensor preview)
+
+# --- Dispatcher signals ---------------------------------------------------
+# Fired with the record key whenever a device's log changes, so its entities
+# can refresh their state.
+SIGNAL_NOTES_UPDATED = f"{DOMAIN}_notes_updated"

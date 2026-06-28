@@ -1,0 +1,67 @@
+# Device Notes service surface. Each service accepts EITHER device_id OR any
+# entity_id on the target device (entity_id is resolved to its device).
+
+append:
+  name: Append note
+  description: Append a timestamped line to a device's note log.
+  fields:
+    device_id:
+      name: Device
+      description: Target device. Provide this or entity_id.
+      required: false
+      selector:
+        device: {}
+    entity_id:
+      name: Entity
+      description: Any entity on the target device; resolved to its device.
+      required: false
+      selector:
+        entity: {}
+    note:
+      name: Note
+      description: The line to append (trimmed, max 255 characters).
+      required: true
+      example: Replaced the AA batteries
+      selector:
+        text: {}
+    source:
+      name: Source
+      description: Who wrote the line. Defaults to "agent" for service calls.
+      required: false
+      example: agent
+      selector:
+        text: {}
+
+clear:
+  name: Clear notes
+  description: Delete the entire note log for a device.
+  fields:
+    device_id:
+      name: Device
+      description: Target device. Provide this or entity_id.
+      required: false
+      selector:
+        device: {}
+    entity_id:
+      name: Entity
+      description: Any entity on the target device; resolved to its device.
+      required: false
+      selector:
+        entity: {}
+
+delete_last:
+  name: Delete last note
+  description: Remove the most recent note entry (undo; the log is append-only).
+  fields:
+    device_id:
+      name: Device
+      description: Target device. Provide this or entity_id.
+      required: false
+      selector:
+        device: {}
+    entity_id:
+      name: Entity
+      description: Any entity on the target device; resolved to its device.
+      required: false
+      selector:
+        entity: {}

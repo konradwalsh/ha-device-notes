@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Device Notes",
+        "description": "Set up Device Notes. After install you'll pick which devices (or areas) get a note log attached."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Device Notes is already configured. Use its options to add or remove devices."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Device Notes",
+        "description": "Choose devices and/or areas to attach a note log to. Every device in a selected area gets one automatically.",
+        "data": {
+          "devices": "Devices",
+          "areas": "Areas (all devices within them)"
+        }
+      }
+    }
+  }
+}

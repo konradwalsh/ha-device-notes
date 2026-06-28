@@ -1,0 +1,9 @@
+# Normalize line endings to LF in the repo and on checkout (Home Assistant runs
+# on Linux; keep source consistent for all contributors regardless of OS).
+* text=auto eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
