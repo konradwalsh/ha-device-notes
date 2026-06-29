@@ -1,6 +1,7 @@
 {
   "domain": "device_notes",
   "name": "Device Notes",
+  "after_dependencies": ["http", "frontend"],
   "codeowners": ["@konradwalsh"],
   "config_flow": true,
   "dependencies": [],
