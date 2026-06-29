@@ -110,8 +110,9 @@ built-in walkthrough — all themed to your dashboard.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md). The project uses Home Assistant calendar
-versioning (`YYYY.M.PATCH`); each GitHub release mirrors a changelog entry.
+See [CHANGELOG.md](https://github.com/konradwalsh/ha-device-notes/blob/main/CHANGELOG.md).
+The project uses Home Assistant calendar versioning (`YYYY.M.PATCH`); each GitHub
+release mirrors a changelog entry.
 
 ## Development
 
