@@ -7,6 +7,10 @@ and the project uses Home Assistant **calendar versioning** (`YYYY.M.PATCH`).
 
 ## [Unreleased]
 
+### Docs
+- README: badges, a screenshots section (placeholders), a table of contents, and
+  a severity colour legend; added an MIT `LICENSE` file.
+
 ## [2026.6.4] — 2026-06-29
 
 ### Added
