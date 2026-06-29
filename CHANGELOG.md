@@ -7,6 +7,15 @@ and the project uses Home Assistant **calendar versioning** (`YYYY.M.PATCH`).
 
 ## [Unreleased]
 
+## [2026.6.4] — 2026-06-29
+
+### Added
+- The card now surfaces note **severity** — `warning`/`error` rows get a colored
+  badge and a left-edge accent — and shows a **category** chip when set.
+- The card’s add-a-note box gained a **severity** selector and an optional
+  **category** field, so a human records the same structure an agent does.
+- The built-in card tutorial now demonstrates severity and category.
+
 ## [2026.6.3] — 2026-06-29
 
 ### Changed
@@ -65,7 +74,8 @@ and the project uses Home Assistant **calendar versioning** (`YYYY.M.PATCH`).
   excluded from the recorder.
 - Adopted Home Assistant calendar versioning.
 
-[Unreleased]: https://github.com/konradwalsh/ha-device-notes/compare/2026.6.3...HEAD
+[Unreleased]: https://github.com/konradwalsh/ha-device-notes/compare/2026.6.4...HEAD
+[2026.6.4]: https://github.com/konradwalsh/ha-device-notes/compare/2026.6.3...2026.6.4
 [2026.6.3]: https://github.com/konradwalsh/ha-device-notes/compare/2026.6.2...2026.6.3
 [2026.6.2]: https://github.com/konradwalsh/ha-device-notes/compare/2026.6.1...2026.6.2
 [2026.6.1]: https://github.com/konradwalsh/ha-device-notes/compare/2026.6.0...2026.6.1

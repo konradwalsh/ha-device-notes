@@ -68,6 +68,14 @@ class DeviceNotesCard extends HTMLElement {
               ? `<div class="dn-add">
             <input class="dn-add-input" type="text" maxlength="255" placeholder="Add a note…" />
             <button class="dn-add-btn">Add</button>
+          </div>
+          <div class="dn-add-opts">
+            <select class="dn-sev-select" title="Severity" aria-label="Severity">
+              <option value="info">info</option>
+              <option value="warning">warning</option>
+              <option value="error">error</option>
+            </select>
+            <input class="dn-cat-input" type="text" maxlength="40" placeholder="category (optional)" aria-label="Category" />
           </div>`
               : ""
           }
@@ -84,25 +92,41 @@ class DeviceNotesCard extends HTMLElement {
     const input = this.querySelector(".dn-add-input");
     const addBtn = this.querySelector(".dn-add-btn");
     if (input && addBtn) {
-      addBtn.addEventListener("click", () => this._addNote(input));
+      addBtn.addEventListener("click", () => this._addNote());
       input.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") this._addNote(input);
+        if (ev.key === "Enter") this._addNote();
       });
+      const cat = this.querySelector(".dn-cat-input");
+      if (cat) {
+        cat.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") this._addNote();
+        });
+      }
     }
     this.querySelectorAll(".dn-del").forEach((b) =>
       b.addEventListener("click", () => this._deleteEntry(b.getAttribute("data-ts")))
     );
   }
 
-  _addNote(input) {
+  _addNote() {
+    const input = this.querySelector(".dn-add-input");
+    if (!input || !this._hass) return;
     const note = (input.value || "").trim();
-    if (!note || !this._hass) return;
-    this._hass.callService("device_notes", "append", {
+    if (!note) return;
+    const sevSel = this.querySelector(".dn-sev-select");
+    const catInput = this.querySelector(".dn-cat-input");
+    const data = {
       entity_id: this._config.entity,
       note,
       source: "user",
-    });
+      severity: sevSel ? sevSel.value : "info",
+    };
+    const category = catInput ? (catInput.value || "").trim() : "";
+    if (category) data.category = category;
+    this._hass.callService("device_notes", "append", data);
     input.value = "";
+    if (catInput) catInput.value = "";
+    if (sevSel) sevSel.value = "info";
   }
 
   _deleteEntry(ts) {
@@ -115,12 +139,24 @@ class DeviceNotesCard extends HTMLElement {
 
   _row(e) {
     const src = (e.source || "").toString();
+    const known = ["info", "warning", "error"];
+    const sevRaw = (e.severity || "info").toString().toLowerCase();
+    const sev = known.includes(sevRaw) ? sevRaw : "info";
+    const sevTag =
+      sev === "info" ? "" : `<span class="dn-sev dn-sev-${sev}">${sev}</span>`;
+    const catChip = e.category
+      ? `<span class="dn-cat">${this._esc(e.category)}</span>`
+      : "";
     return `
-      <div class="dn-entry">
+      <div class="dn-entry dn-edge-${sev}">
         <div class="dn-meta">
-          <span class="dn-src dn-src-${this._esc(src.toLowerCase())}">${this._esc(
-            src
-          )}</span>
+          <span class="dn-meta-left">
+            <span class="dn-src dn-src-${this._esc(src.toLowerCase())}">${this._esc(
+              src
+            )}</span>
+            ${sevTag}
+            ${catChip}
+          </span>
           <span class="dn-meta-right">
             <span class="dn-ts">${this._esc(this._fmt(e.ts))}</span>
             <button class="dn-del" title="Delete" aria-label="Delete" data-ts="${this._esc(
@@ -213,16 +249,19 @@ class DeviceNotesCard extends HTMLElement {
       Every entry is timestamped and tagged with its source.</p>`;
 
     const thisCard = `
-      <p>This card shows the full log, newest first:</p>
+      <p>The full log, newest first. Notes can carry a <b>severity</b>
+      (info / warning / error) and an optional <b>category</b>:</p>
       <div class="dn-mock dn-mock-log">
-        <div class="dn-entry"><div class="dn-meta">
-          <span class="dn-src dn-src-user">user</span>
+        <div class="dn-entry dn-edge-error"><div class="dn-meta">
+          <span class="dn-meta-left"><span class="dn-src dn-src-agent">agent</span>
+          <span class="dn-sev dn-sev-error">error</span>
+          <span class="dn-cat">maintenance</span></span>
           <span class="dn-ts">today 09:30</span></div>
-          <div class="dn-text">Replaced the AA batteries</div></div>
+          <div class="dn-text">Boiler pressure dropped to 0.6 bar — needs a look</div></div>
         <div class="dn-entry"><div class="dn-meta">
-          <span class="dn-src dn-src-agent">agent</span>
+          <span class="dn-meta-left"><span class="dn-src dn-src-user">user</span></span>
           <span class="dn-ts">today 08:00</span></div>
-          <div class="dn-text">Boiler serviced — pressure back to 1.4 bar</div></div>
+          <div class="dn-text">Replaced the AA batteries</div></div>
       </div>`;
 
     return [
@@ -311,8 +350,11 @@ class DeviceNotesCard extends HTMLElement {
                    font-weight: 700; line-height: 1; color: var(--text-primary-color, #fff);
                    background: var(--primary-color, #03a9f4); }
         .dn-list { display: flex; flex-direction: column; gap: 10px; }
-        .dn-entry { padding-bottom: 10px; border-bottom: 1px solid var(--divider-color, #e0e0e0); }
+        .dn-entry { padding: 0 0 10px 8px; border-left: 3px solid transparent;
+                    border-bottom: 1px solid var(--divider-color, #e0e0e0); }
         .dn-entry:last-child { border-bottom: none; padding-bottom: 0; }
+        .dn-edge-warning { border-left-color: var(--warning-color, #ffa600); }
+        .dn-edge-error { border-left-color: var(--error-color, #db4437); }
         .dn-meta { display: flex; justify-content: space-between; align-items: center;
                    font-size: 0.75rem; margin-bottom: 2px; }
         .dn-src { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
@@ -320,6 +362,15 @@ class DeviceNotesCard extends HTMLElement {
                   background: var(--secondary-text-color, #888); }
         .dn-src-agent { background: var(--primary-color, #03a9f4); }
         .dn-src-user { background: var(--success-color, #4caf50); }
+        .dn-meta-left { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .dn-sev { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+                  font-size: 0.7rem; padding: 1px 6px; border-radius: 9px;
+                  color: var(--text-primary-color, #fff); }
+        .dn-sev-warning { background: var(--warning-color, #ffa600); }
+        .dn-sev-error { background: var(--error-color, #db4437); }
+        .dn-cat { font-size: 0.7rem; padding: 1px 6px; border-radius: 9px;
+                  background: var(--secondary-background-color, #eee);
+                  color: var(--secondary-text-color, #666); }
         .dn-ts { color: var(--secondary-text-color, #888); }
         .dn-text { color: var(--primary-text-color, #212121); white-space: pre-wrap;
                    word-break: break-word; }
@@ -336,6 +387,12 @@ class DeviceNotesCard extends HTMLElement {
         .dn-add-btn { border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer;
                       font-weight: 600; background: var(--primary-color, #03a9f4);
                       color: var(--text-primary-color, #fff); }
+        .dn-add-opts { display: flex; gap: 8px; margin-top: 8px; }
+        .dn-sev-select, .dn-cat-input { padding: 6px 8px; border-radius: 8px; font-size: 0.85rem;
+                        border: 1px solid var(--divider-color, #ccc);
+                        background: var(--card-background-color, #fff);
+                        color: var(--primary-text-color); }
+        .dn-cat-input { flex: 1; }
 
         .dn-overlay { display: none; position: fixed; inset: 0; z-index: 99;
                       background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
