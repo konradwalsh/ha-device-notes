@@ -10,12 +10,43 @@ from __future__ import annotations
 
 import json
 
-from .const import MAX_ENTRIES, MAX_ENTRY_CHARS, MAX_LOG_BYTES, MAX_STATE_CHARS
+from .const import (
+    DEFAULT_SEVERITY,
+    ISSUE_SEVERITIES,
+    MAX_ENTRIES,
+    MAX_ENTRY_CHARS,
+    MAX_LOG_BYTES,
+    MAX_STATE_CHARS,
+)
 
 
-def make_entry(text: str, source: str, ts: str) -> dict:
-    """Build a log entry, stripped and capped at the 255-char entry ceiling."""
-    return {"ts": ts, "source": source, "text": text.strip()[:MAX_ENTRY_CHARS]}
+def make_entry(
+    text: str,
+    source: str,
+    ts: str,
+    *,
+    category: str | None = None,
+    severity: str = DEFAULT_SEVERITY,
+) -> dict:
+    """Build a log entry, stripped and capped at the 255-char entry ceiling.
+
+    ``category`` is free-form (agents group however they like); ``severity`` is
+    one of info/warning/error and feeds the per-device issue count.
+    """
+    return {
+        "ts": ts,
+        "source": source,
+        "text": text.strip()[:MAX_ENTRY_CHARS],
+        "category": category,
+        "severity": severity,
+    }
+
+
+def issue_count(log: list[dict]) -> int:
+    """Number of entries whose severity is warning or error (legacy = info)."""
+    return sum(
+        1 for e in log if e.get("severity", DEFAULT_SEVERITY) in ISSUE_SEVERITIES
+    )
 
 
 def append(

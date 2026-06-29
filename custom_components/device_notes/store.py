@@ -17,7 +17,13 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 
 from . import model
-from .const import SIGNAL_NOTES_UPDATED, STORAGE_KEY, STORAGE_VERSION
+from .const import (
+    ATTR_DEVICE_ID,
+    EVENT_NOTE_ADDED,
+    SIGNAL_NOTES_UPDATED,
+    STORAGE_KEY,
+    STORAGE_VERSION,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +89,12 @@ class DeviceNotesStore:
             len(self._data["devices"][key]["log"]),
         )
         async_dispatcher_send(self._hass, SIGNAL_NOTES_UPDATED, key)
+        # Surface on the event bus so automations can react to new notes. Covers
+        # every append path (service, device-page text box, card) since they all
+        # funnel through here.
+        self._hass.bus.async_fire(
+            EVENT_NOTE_ADDED, {ATTR_DEVICE_ID: device_id, "key": key, **entry}
+        )
         return key
 
     def key_for_device_id(self, device_id: str) -> str | None:

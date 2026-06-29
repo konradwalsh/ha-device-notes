@@ -17,15 +17,27 @@ SUBENTRY_AREA = "area"
 STORAGE_VERSION = 1
 STORAGE_KEY = "device_notes"
 
-# --- Log entry shape: {"ts": <iso8601>, "source": <str>, "text": <str>} ---
+# --- Log entry shape ------------------------------------------------------
+# {"ts": <iso8601>, "source": <str>, "text": <str>,
+#  "category": <str|None>, "severity": <"info"|"warning"|"error">}
 ATTR_TS = "ts"
 ATTR_SOURCE = "source"
 ATTR_TEXT = "text"
 ATTR_LOG = "log"
+ATTR_CATEGORY = "category"
+ATTR_SEVERITY = "severity"
 
 # --- Sources --------------------------------------------------------------
 SOURCE_USER = "user"
 SOURCE_AGENT = "agent"
+
+# --- Severity (signal level; the issues sensor counts warning+error) ------
+SEVERITY_INFO = "info"
+SEVERITY_WARNING = "warning"
+SEVERITY_ERROR = "error"
+SEVERITIES = (SEVERITY_INFO, SEVERITY_WARNING, SEVERITY_ERROR)
+DEFAULT_SEVERITY = SEVERITY_INFO
+ISSUE_SEVERITIES = frozenset({SEVERITY_WARNING, SEVERITY_ERROR})
 
 # --- Service names --------------------------------------------------------
 SERVICE_APPEND = "append"
@@ -48,3 +60,9 @@ MAX_STATE_CHARS = 255  # HA state-string hard limit (sensor preview)
 # Fired with the record key whenever a device's log changes, so its entities
 # can refresh their state.
 SIGNAL_NOTES_UPDATED = f"{DOMAIN}_notes_updated"
+
+# --- Bus event ------------------------------------------------------------
+# Fired on the HA event bus whenever a note is appended (any path: service,
+# device-page text box, or card), so automations can react. Event data:
+# {device_id, key, ts, source, text, category, severity}.
+EVENT_NOTE_ADDED = f"{DOMAIN}_added"

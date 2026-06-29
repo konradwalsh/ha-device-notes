@@ -12,7 +12,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
+from homeassistant.components.sensor import (
+    ENTITY_ID_FORMAT,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
@@ -43,7 +47,7 @@ async def async_setup_entry(
     dev_reg = dr.async_get(hass)
 
     for subentry_id, subentry in entry.subentries.items():
-        entities: list[DeviceNotesSensor] = []
+        entities: list[SensorEntity] = []
         for device_id in devices_for_subentry(hass, subentry):
             device = dev_reg.async_get(device_id)
             if device is None:
@@ -63,7 +67,13 @@ async def async_setup_entry(
             sensor.entity_id = async_generate_entity_id(
                 ENTITY_ID_FORMAT, f"{name or device_id} Notes", hass=hass
             )
-            entities.append(sensor)
+            issues = DeviceNotesIssuesSensor(
+                store, key, device.identifiers, device.connections
+            )
+            issues.entity_id = async_generate_entity_id(
+                ENTITY_ID_FORMAT, f"{name or device_id} Note issues", hass=hass
+            )
+            entities.extend((sensor, issues))
         if entities:
             async_add_entities(entities, config_subentry_id=subentry_id)
 
@@ -107,6 +117,51 @@ class DeviceNotesSensor(SensorEntity):
     def extra_state_attributes(self) -> dict:
         log = self._log
         return {ATTR_LOG: log, "count": len(log)}
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, SIGNAL_NOTES_UPDATED, self._handle_update
+            )
+        )
+
+    @callback
+    def _handle_update(self, key: str) -> None:
+        if key == self._key:
+            self.async_write_ha_state()
+
+
+class DeviceNotesIssuesSensor(SensorEntity):
+    """Count of open issues (notes with warning/error severity) on a device."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Note issues"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:alert-circle-outline"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        store: DeviceNotesStore,
+        key: str,
+        identifiers: set,
+        connections: set,
+    ) -> None:
+        self._store = store
+        self._key = key
+        self._attr_unique_id = f"{key}_issues"
+        self._attr_device_info = DeviceInfo(
+            identifiers=identifiers, connections=connections
+        )
+
+    @property
+    def _log(self) -> list[dict]:
+        record = self._store.data["devices"].get(self._key)
+        return record["log"] if record else []
+
+    @property
+    def native_value(self) -> int:
+        return notelog.issue_count(self._log)
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(

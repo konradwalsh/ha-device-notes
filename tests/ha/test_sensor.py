@@ -60,9 +60,11 @@ async def test_sensor_attaches_to_the_opted_in_device(hass):
         )
         if e.platform == DOMAIN and e.domain == "sensor"
     ]
-    assert len(ours) == 1  # our notes sensor landed on the existing device
-    assert ours[0].entity_category == EntityCategory.DIAGNOSTIC
-    assert hass.states.get(ours[0].entity_id) is not None
+    # Each opted-in device gets two sensors: the notes log and the issue count.
+    assert {e.unique_id.rsplit("_", 1)[1] for e in ours} == {"notes", "issues"}
+    assert all(e.entity_category == EntityCategory.DIAGNOSTIC for e in ours)
+    notes = _our_sensor_entry(hass, device.id)
+    assert hass.states.get(notes.entity_id) is not None
 
 
 async def test_sensor_reflects_appended_notes(hass):
@@ -87,6 +89,42 @@ async def test_sensor_log_attribute_is_excluded_from_recorder(hass):
     from custom_components.device_notes.sensor import DeviceNotesSensor
 
     assert "log" in DeviceNotesSensor._unrecorded_attributes
+
+
+def _our_issues_entry(hass, device_id):
+    ent_reg = er.async_get(hass)
+    return next(
+        e
+        for e in er.async_entries_for_device(
+            ent_reg, device_id, include_disabled_entities=True
+        )
+        if e.platform == DOMAIN
+        and e.domain == "sensor"
+        and e.unique_id.endswith("_issues")
+    )
+
+
+async def test_issues_sensor_counts_warning_and_error_notes(hass):
+    device = _add_foreign_device(hass)
+    await _setup_device_notes(hass, [device.id])
+
+    for note, severity in (
+        ("all good", "info"),
+        ("getting warm", "warning"),
+        ("on fire", "error"),
+    ):
+        await hass.services.async_call(
+            DOMAIN,
+            SERVICE_APPEND,
+            {"device_id": device.id, "note": note, "severity": severity},
+            blocking=True,
+        )
+    await hass.async_block_till_done()
+
+    issues_entry = _our_issues_entry(hass, device.id)
+    state = hass.states.get(issues_entry.entity_id)
+    assert state.state == "2"  # warning + error, info excluded
+    assert issues_entry.entity_category == EntityCategory.DIAGNOSTIC
 
 
 async def test_sensor_entity_id_is_clean_when_device_named_after_area(hass):

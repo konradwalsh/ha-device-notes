@@ -6,6 +6,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.device_notes.const import (
     DOMAIN,
+    EVENT_NOTE_ADDED,
     SERVICE_APPEND,
     SERVICE_CLEAR,
     SERVICE_DELETE,
@@ -82,6 +83,62 @@ async def test_append_passes_through_explicit_source(hass):
 
     key = store.key_for_device_id(device.id)
     assert store.data["devices"][key]["log"][0]["source"] == "user"
+
+
+async def test_append_records_category_and_severity(hass):
+    _, device = _add_device(hass)
+    store = await _setup(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_APPEND,
+        {
+            "device_id": device.id,
+            "note": "valve stuck open",
+            "category": "maintenance",
+            "severity": "error",
+        },
+        blocking=True,
+    )
+
+    key = store.key_for_device_id(device.id)
+    entry = store.data["devices"][key]["log"][0]
+    assert entry["category"] == "maintenance"
+    assert entry["severity"] == "error"
+
+
+async def test_append_defaults_severity_to_info(hass):
+    _, device = _add_device(hass)
+    store = await _setup(hass)
+
+    await hass.services.async_call(
+        DOMAIN, SERVICE_APPEND, {"device_id": device.id, "note": "fyi"}, blocking=True
+    )
+
+    key = store.key_for_device_id(device.id)
+    assert store.data["devices"][key]["log"][0]["severity"] == "info"
+
+
+async def test_append_fires_note_added_event(hass):
+    _, device = _add_device(hass)
+    await _setup(hass)
+
+    events = []
+    hass.bus.async_listen(EVENT_NOTE_ADDED, events.append)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_APPEND,
+        {"device_id": device.id, "note": "leak detected", "severity": "warning"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    assert len(events) == 1
+    data = events[0].data
+    assert data["device_id"] == device.id
+    assert data["text"] == "leak detected"
+    assert data["severity"] == "warning"
 
 
 async def test_clear_service_empties_the_log(hass):

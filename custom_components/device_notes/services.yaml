@@ -31,6 +31,24 @@ append:
       example: agent
       selector:
         text: {}
+    category:
+      name: Category
+      description: Optional free-form grouping (e.g. maintenance, observation).
+      required: false
+      example: maintenance
+      selector:
+        text: {}
+    severity:
+      name: Severity
+      description: Signal level. warning/error notes feed the device's issue count.
+      required: false
+      default: info
+      selector:
+        select:
+          options:
+            - info
+            - warning
+            - error
 
 clear:
   name: Clear notes

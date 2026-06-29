@@ -20,6 +20,8 @@ def test_make_entry_sets_all_fields():
         "ts": "2026-01-01T00:00:00",
         "source": "agent",
         "text": "hello",
+        "category": None,
+        "severity": const.SEVERITY_INFO,
     }
 
 
@@ -124,3 +126,34 @@ def test_delete_at_unknown_ts_leaves_log_unchanged():
     log = [{"ts": "t1", "source": "agent", "text": "a"}]
 
     assert notelog.delete_at(log, "nope") == log
+
+
+def test_make_entry_defaults_severity_info_and_null_category():
+    entry = notelog.make_entry("hello", source="agent", ts="t")
+
+    assert entry["severity"] == const.SEVERITY_INFO
+    assert entry["category"] is None
+
+
+def test_make_entry_records_category_and_severity():
+    entry = notelog.make_entry(
+        "valve stuck", source="agent", ts="t", category="maintenance", severity="error"
+    )
+
+    assert entry["category"] == "maintenance"
+    assert entry["severity"] == "error"
+
+
+def test_issue_count_counts_warning_and_error_only():
+    log = [
+        {"ts": "t4", "source": "agent", "text": "d", "severity": "error"},
+        {"ts": "t3", "source": "agent", "text": "c", "severity": "warning"},
+        {"ts": "t2", "source": "agent", "text": "b", "severity": "info"},
+        {"ts": "t1", "source": "user", "text": "a"},  # legacy entry, no severity
+    ]
+
+    assert notelog.issue_count(log) == 2
+
+
+def test_issue_count_is_zero_for_empty_log():
+    assert notelog.issue_count([]) == 0

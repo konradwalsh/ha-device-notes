@@ -20,16 +20,20 @@ from homeassistant.util import dt as dt_util
 
 from . import notelog
 from .const import (
+    ATTR_CATEGORY,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
     ATTR_NOTE,
+    ATTR_SEVERITY,
     ATTR_SOURCE,
     ATTR_TS,
+    DEFAULT_SEVERITY,
     DOMAIN,
     SERVICE_APPEND,
     SERVICE_CLEAR,
     SERVICE_DELETE,
     SERVICE_DELETE_LAST,
+    SEVERITIES,
     SOURCE_AGENT,
 )
 from .store import DeviceNotesStore
@@ -46,6 +50,8 @@ APPEND_SCHEMA = vol.Schema(
         **_TARGET_FIELDS,
         vol.Required(ATTR_NOTE): cv.string,
         vol.Optional(ATTR_SOURCE): cv.string,
+        vol.Optional(ATTR_CATEGORY): cv.string,
+        vol.Optional(ATTR_SEVERITY): vol.In(SEVERITIES),
     }
 )
 DELETE_SCHEMA = vol.Schema({**_TARGET_FIELDS, vol.Required(ATTR_TS): cv.string})
@@ -76,15 +82,27 @@ async def async_setup_services(hass: HomeAssistant, store: DeviceNotesStore) -> 
         if device is None:
             raise ServiceValidationError(f"Device {device_id} not found")
         source = call.data.get(ATTR_SOURCE) or SOURCE_AGENT
+        severity = call.data.get(ATTR_SEVERITY) or DEFAULT_SEVERITY
         ts = dt_util.now().isoformat(timespec="seconds")
-        entry = notelog.make_entry(call.data[ATTR_NOTE], source=source, ts=ts)
+        entry = notelog.make_entry(
+            call.data[ATTR_NOTE],
+            source=source,
+            ts=ts,
+            category=call.data.get(ATTR_CATEGORY),
+            severity=severity,
+        )
         await store.async_append(
             device_id=device_id,
             identifiers=device.identifiers,
             name=device.name_by_user or device.name,
             entry=entry,
         )
-        _LOGGER.debug("Service append: device=%s source=%s", device_id, source)
+        _LOGGER.debug(
+            "Service append: device=%s source=%s severity=%s",
+            device_id,
+            source,
+            severity,
+        )
 
     async def _clear(call: ServiceCall) -> None:
         device_id = _resolve_device_id(hass, call.data)
