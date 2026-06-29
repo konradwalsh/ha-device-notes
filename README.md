@@ -17,12 +17,17 @@ line straight from the device page.
 
 ## How it works
 
-Each opted-in device gets **two entities**, both attached to the existing device:
+Each opted-in device gets a small set of entities, all attached to the existing
+device and sharing a **`Notes`** name prefix so they cluster together in the
+device page's Diagnostic section:
 
-| Entity | Category | Purpose |
+| Entity | Shown as | Purpose |
 | --- | --- | --- |
-| `sensor.<device>_notes` | Diagnostic | State = preview of the latest entry; `attributes.log` holds the full newest-first list of `{ts, source, text}`. |
-| `text.<device>_note_entry` | Config | An "add a line" box. Type + Enter → timestamps it, appends to the log as a `user` note, then clears itself. |
+| `sensor.<device>_notes` | Notes | State = short preview of the latest note; `attributes.log` holds the full newest-first list of `{ts, source, text, category, severity}`. |
+| `sensor.<device>_note_issues` | Notes: issues | Count of notes flagged `warning` or `error` — a signal you can put on a dashboard or trigger automations from. |
+| `text.<device>_note_entry` | Notes: new entry | An "add a line" box. Type + Enter → timestamps it, appends as a `user` note, then clears itself. |
+| `button.<device>_delete_last_note` | Notes: delete last | Undo the most recent entry. |
+| `button.<device>_clear_notes` | Notes: clear all | Wipe the whole log. |
 
 The full `log` attribute is **excluded from the recorder** database. The log is
 capped to the newest **50 entries** and **≤8 KB**; each entry is ≤255 chars.
@@ -34,22 +39,49 @@ opt-in keeps its notes in storage, so re-adding restores them.
 
 ## Services
 
-| Service | Targets | Purpose |
+| Service | Targets / fields | Purpose |
 | --- | --- | --- |
-| `device_notes.append` | `device_id` **or** `entity_id` + `note` (+ optional `source`) | Append a line. `source` defaults to `agent`. |
-| `device_notes.clear` | `device_id` **or** `entity_id` | Wipe the whole log. |
-| `device_notes.delete_last` | `device_id` **or** `entity_id` | Undo the most recent entry. |
+| `device_notes.append` | `device_id`/`entity_id` + `note` (+ `source`, `category`, `severity`) | Append a line. `source` defaults to `agent`; `severity` ∈ `info`/`warning`/`error` feeds the issue count. |
+| `device_notes.get` | `device_id`/`entity_id` → **response** | Return the notes (newest-first) plus `count` and `issues`. Read-only — ideal for an AI agent to pull a device's history in one call. |
+| `device_notes.clear` | `device_id`/`entity_id` | Wipe the whole log. |
+| `device_notes.delete_last` | `device_id`/`entity_id` | Undo the most recent entry. |
+| `device_notes.delete` | `device_id`/`entity_id` + `ts` | Remove one specific entry by its timestamp. |
 
 Either a `device_id` or any `entity_id` on the target device works (entity ids are
 resolved to their device).
 
 ```yaml
-# Example: an automation / AI agent appends a note
+# Append a note (automation / AI agent)
 action: device_notes.append
 data:
   device_id: 3d7c2957fa567d3dd4c1eeb902435cff
   note: Boiler pressure was low (0.8 bar) — topped up to 1.4.
+  category: maintenance
+  severity: warning
 ```
+
+```yaml
+# Read a device's notes back as response data
+action: device_notes.get
+data:
+  entity_id: sensor.living_room_trv_notes
+response_variable: notes
+```
+
+## Voice & AI assistants
+
+Two intents are registered and **auto-exposed to Home Assistant's Assist LLM
+API** — no extra configuration. An LLM-backed assistant can call them directly:
+
+- **DeviceNotesAddNote** — "add a note to the living room TRV: valve is sticking"
+- **DeviceNotesGetNotes** — "what notes are on the boiler?"
+
+## Reacting to notes
+
+Every append (service, device-page box, or card) fires a **`device_notes_added`**
+event with `{device_id, key, ts, source, text, category, severity}`, so you can
+notify or automate on new notes — e.g. ping yourself whenever an agent logs a
+`severity: error` note on any device.
 
 ## Installation (HACS)
 
@@ -73,7 +105,8 @@ title: TRV Notes        # optional
 ```
 
 It renders the full log newest-first with source badges (agent/user) and
-timestamps, themed to your dashboard.
+timestamps, an **add-a-note** box, a per-row delete, and a **"?"** button with a
+built-in walkthrough — all themed to your dashboard.
 
 ## Development
 
