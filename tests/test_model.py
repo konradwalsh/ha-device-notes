@@ -186,3 +186,24 @@ def test_clear_notes_empties_the_log():
     result = model.clear_notes(data, "k1")
 
     assert result["devices"]["k1"]["log"] == []
+
+
+def test_delete_note_at_removes_the_matching_entry():
+    data = {
+        "devices": {
+            "k1": {
+                "device_id": "d",
+                "identifiers": [["mqtt", "a"]],
+                "name": "A",
+                "log": [
+                    {"ts": "t2", "source": "agent", "text": "new"},
+                    {"ts": "t1", "source": "user", "text": "old"},
+                ],
+            }
+        }
+    }
+
+    result = model.delete_note_at(data, "k1", "t2")
+
+    assert [e["text"] for e in result["devices"]["k1"]["log"]] == ["old"]
+    assert data["devices"]["k1"]["log"][0]["text"] == "new"  # input not mutated

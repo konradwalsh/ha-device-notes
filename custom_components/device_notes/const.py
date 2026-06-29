@@ -7,6 +7,11 @@ DOMAIN = "device_notes"
 # --- Config / options keys ------------------------------------------------
 CONF_DEVICES = "devices"
 CONF_AREAS = "areas"
+CONF_AREA_ID = "area_id"
+
+# Subentry types (per-device / per-area opt-in)
+SUBENTRY_DEVICE = "device"
+SUBENTRY_AREA = "area"
 
 # --- Storage --------------------------------------------------------------
 STORAGE_VERSION = 1
@@ -26,6 +31,7 @@ SOURCE_AGENT = "agent"
 SERVICE_APPEND = "append"
 SERVICE_CLEAR = "clear"
 SERVICE_DELETE_LAST = "delete_last"
+SERVICE_DELETE = "delete"
 
 # --- Service fields -------------------------------------------------------
 ATTR_DEVICE_ID = "device_id"

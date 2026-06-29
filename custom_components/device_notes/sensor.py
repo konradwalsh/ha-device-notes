@@ -21,7 +21,7 @@ from homeassistant.helpers.entity import DeviceInfo, async_generate_entity_id
 
 from . import notelog
 from .const import ATTR_LOG, DOMAIN, SIGNAL_NOTES_UPDATED
-from .selection import effective_device_ids
+from .selection import devices_for_subentry
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -42,27 +42,30 @@ async def async_setup_entry(
     store: DeviceNotesStore = hass.data[DOMAIN]["store"]
     dev_reg = dr.async_get(hass)
 
-    entities: list[DeviceNotesSensor] = []
-    for device_id in effective_device_ids(hass, entry):
-        device = dev_reg.async_get(device_id)
-        if device is None:
-            _LOGGER.warning(
-                "Opted-in device %s not in registry; skipping its notes sensor",
-                device_id,
+    for subentry_id, subentry in entry.subentries.items():
+        entities: list[DeviceNotesSensor] = []
+        for device_id in devices_for_subentry(hass, subentry):
+            device = dev_reg.async_get(device_id)
+            if device is None:
+                _LOGGER.warning(
+                    "Opted-in device %s not in registry; skipping its notes sensor",
+                    device_id,
+                )
+                continue
+            name = device.name_by_user or device.name
+            key = await store.async_ensure(
+                device_id=device_id, identifiers=device.identifiers, name=name
             )
-            continue
-        name = device.name_by_user or device.name
-        key = await store.async_ensure(
-            device_id=device_id, identifiers=device.identifiers, name=name
-        )
-        sensor = DeviceNotesSensor(store, key, device.identifiers, device.connections)
-        # Force a clean entity_id; newer HA otherwise folds the area name in.
-        sensor.entity_id = async_generate_entity_id(
-            ENTITY_ID_FORMAT, f"{name or device_id} Notes", hass=hass
-        )
-        entities.append(sensor)
-
-    async_add_entities(entities)
+            sensor = DeviceNotesSensor(
+                store, key, device.identifiers, device.connections
+            )
+            # Force a clean entity_id; newer HA otherwise folds the area name in.
+            sensor.entity_id = async_generate_entity_id(
+                ENTITY_ID_FORMAT, f"{name or device_id} Notes", hass=hass
+            )
+            entities.append(sensor)
+        if entities:
+            async_add_entities(entities, config_subentry_id=subentry_id)
 
 
 class DeviceNotesSensor(SensorEntity):
@@ -70,6 +73,8 @@ class DeviceNotesSensor(SensorEntity):
 
     _attr_has_entity_name = True
     _attr_name = "Notes"
+    # All Device Notes entities share DIAGNOSTIC so they group in one device-page
+    # section (HA forbids sensors in CONFIG). Recorder exclusion is separate, below.
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:note-text-outline"
     # Keep the (large, frequently-changing) log out of the recorder DB.

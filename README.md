@@ -57,8 +57,9 @@ data:
    category **Integration**.
 2. Install **Device Notes**, then restart Home Assistant.
 3. **Settings → Devices & Services → + Add Integration → Device Notes**.
-4. On the entry, click **Configure** and choose the devices and/or areas to attach
-   a note log to. Every device in a selected area gets one automatically.
+4. On the **Device Notes** entry, click **+ Add** → **Add a device** or **Add an
+   area**. Each is a removable subentry; removing one cleanly removes its note
+   entities. Every device in an added area gets a note log automatically.
 
 ## Lovelace card
 

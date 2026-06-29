@@ -108,3 +108,19 @@ def test_preview_truncated_to_state_limit():
     log = [{"ts": "2026-01-02T09:30:00", "source": "agent", "text": "x" * 255}]
 
     assert len(notelog.preview(log)) <= const.MAX_STATE_CHARS
+
+
+def test_delete_at_removes_the_entry_with_matching_ts():
+    log = [
+        {"ts": "t3", "source": "agent", "text": "c"},
+        {"ts": "t2", "source": "user", "text": "b"},
+        {"ts": "t1", "source": "agent", "text": "a"},
+    ]
+
+    assert [e["text"] for e in notelog.delete_at(log, "t2")] == ["c", "a"]
+
+
+def test_delete_at_unknown_ts_leaves_log_unchanged():
+    log = [{"ts": "t1", "source": "agent", "text": "a"}]
+
+    assert notelog.delete_at(log, "nope") == log

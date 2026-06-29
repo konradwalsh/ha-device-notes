@@ -6,7 +6,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.device_notes.const import DOMAIN, SERVICE_APPEND
+from custom_components.device_notes.const import DOMAIN, SERVICE_APPEND, SUBENTRY_DEVICE
 
 
 def _add_foreign_device(hass, *, identifiers=(("demo", "xyz"),), name="Demo Device"):
@@ -21,7 +21,16 @@ def _add_foreign_device(hass, *, identifiers=(("demo", "xyz"),), name="Demo Devi
 
 
 async def _setup_device_notes(hass, device_ids):
-    entry = MockConfigEntry(domain=DOMAIN, options={"devices": list(device_ids)})
+    subentries = [
+        {
+            "subentry_type": SUBENTRY_DEVICE,
+            "data": {"device_id": d},
+            "title": "Device",
+            "unique_id": None,
+        }
+        for d in device_ids
+    ]
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=subentries)
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()

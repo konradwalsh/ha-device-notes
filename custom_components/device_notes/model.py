@@ -117,6 +117,14 @@ def delete_last_note(data: dict, key: str) -> dict:
     return new_data
 
 
+def delete_note_at(data: dict, key: str, ts: str) -> dict:
+    """Remove the entry matching ``ts`` from a record's log. Pure."""
+    new_data = copy.deepcopy(data)
+    rec = new_data["devices"][key]
+    rec["log"] = notelog.delete_at(rec["log"], ts)
+    return new_data
+
+
 def clear_notes(data: dict, key: str) -> dict:
     """Empty a record's log. Pure."""
     new_data = copy.deepcopy(data)

@@ -51,6 +51,14 @@ def delete_last(log: list[dict]) -> list[dict]:
     return log[1:]
 
 
+def delete_at(log: list[dict], ts: str) -> list[dict]:
+    """Return a new log with the first entry matching ``ts`` removed."""
+    for i, entry in enumerate(log):
+        if entry["ts"] == ts:
+            return log[:i] + log[i + 1 :]
+    return log
+
+
 def preview(log: list[dict]) -> str:
     """One-line sensor state: newest entry's text + ts, capped at the state limit."""
     if not log:

@@ -1,10 +1,8 @@
-"""Resolve the effective opted-in device set from a config entry.
+"""Resolve which devices a Device Notes opt-in (subentry) covers.
 
-Opt-in is stored as ``{devices: [...], areas: [...]}`` (in options once
-configured, else data). The effective set is computed LIVE: the explicitly
-chosen devices UNION every device currently in a chosen area — so a device
-added to an opted-in area later is picked up on the next reload without
-re-editing the selection.
+A ``device`` subentry covers exactly its device; an ``area`` subentry covers every
+device currently in that area (resolved live, so devices added to the area later
+are picked up on the next reload).
 """
 
 from __future__ import annotations
@@ -13,26 +11,30 @@ from typing import TYPE_CHECKING
 
 from homeassistant.helpers import device_registry as dr
 
-from .const import CONF_AREAS, CONF_DEVICES
+from .const import ATTR_DEVICE_ID, CONF_AREA_ID, SUBENTRY_AREA, SUBENTRY_DEVICE
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.config_entries import ConfigEntry, ConfigSubentry
     from homeassistant.core import HomeAssistant
 
 
-def selected(entry: ConfigEntry) -> tuple[list[str], list[str]]:
-    """Return (device_ids, area_ids) from options (preferred) or data."""
-    src = entry.options or entry.data
-    return src.get(CONF_DEVICES, []), src.get(CONF_AREAS, [])
+def devices_for_subentry(hass: HomeAssistant, subentry: ConfigSubentry) -> set[str]:
+    """Return the device ids covered by a single subentry."""
+    if subentry.subentry_type == SUBENTRY_DEVICE:
+        device_id = subentry.data.get(ATTR_DEVICE_ID)
+        return {device_id} if device_id else set()
+    if subentry.subentry_type == SUBENTRY_AREA:
+        area_id = subentry.data.get(CONF_AREA_ID)
+        if not area_id:
+            return set()
+        dev_reg = dr.async_get(hass)
+        return {device.id for device in dr.async_entries_for_area(dev_reg, area_id)}
+    return set()
 
 
 def effective_device_ids(hass: HomeAssistant, entry: ConfigEntry) -> set[str]:
-    """Explicit devices plus every device in any selected area."""
-    device_ids, area_ids = selected(entry)
-    result = set(device_ids)
-    if area_ids:
-        dev_reg = dr.async_get(hass)
-        for area_id in area_ids:
-            for device in dr.async_entries_for_area(dev_reg, area_id):
-                result.add(device.id)
+    """Union of devices covered across all of the entry's subentries."""
+    result: set[str] = set()
+    for subentry in entry.subentries.values():
+        result |= devices_for_subentry(hass, subentry)
     return result

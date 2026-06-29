@@ -5,7 +5,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.device_notes.const import DOMAIN
+from custom_components.device_notes.const import DOMAIN, SUBENTRY_DEVICE
 
 
 def _add_foreign_device(hass, *, identifiers=(("demo", "xyz"),), name="Demo Device"):
@@ -19,7 +19,16 @@ def _add_foreign_device(hass, *, identifiers=(("demo", "xyz"),), name="Demo Devi
 
 
 async def _setup_device_notes(hass, device_ids):
-    entry = MockConfigEntry(domain=DOMAIN, options={"devices": list(device_ids)})
+    subentries = [
+        {
+            "subentry_type": SUBENTRY_DEVICE,
+            "data": {"device_id": d},
+            "title": "Device",
+            "unique_id": None,
+        }
+        for d in device_ids
+    ]
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=subentries)
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
@@ -36,12 +45,12 @@ def _entry_for(hass, device_id, domain):
     )
 
 
-async def test_text_entry_attaches_to_device_as_config(hass):
+async def test_text_entry_attaches_as_diagnostic(hass):
     device = _add_foreign_device(hass)
     await _setup_device_notes(hass, [device.id])
 
     text_entry = _entry_for(hass, device.id, "text")
-    assert text_entry.entity_category == EntityCategory.CONFIG
+    assert text_entry.entity_category == EntityCategory.DIAGNOSTIC
 
 
 async def test_setting_text_appends_user_note_and_clears(hass):

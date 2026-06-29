@@ -3,21 +3,44 @@
     "step": {
       "user": {
         "title": "Device Notes",
-        "description": "Set up Device Notes. After install you'll pick which devices (or areas) get a note log attached."
+        "menu_options": {
+          "setup": "Set it up",
+          "tutorial": "Show me how it works"
+        }
+      },
+      "tutorial": {
+        "title": "How it works (1 of 2)",
+        "description": "Device Notes attaches a free-text, timestamped **note log** to any device — written by an AI agent (via the `device_notes.append` service) or by you.\n\nEach opted-in device gets two entities on its page: a **Notes** sensor (the log) and a **Note entry** box (type a line, press Enter)."
+      },
+      "tutorial2": {
+        "title": "How it works (2 of 2)",
+        "description": "Attach devices or areas with **+ Add** on the entry — every device in an added area gets a note log automatically.\n\nThe optional **Device Notes Card** shows the whole log with agent/you badges, and has its own built-in walkthrough."
       }
     },
     "abort": {
-      "single_instance_allowed": "Device Notes is already configured. Use its options to add or remove devices."
+      "single_instance_allowed": "Device Notes is already configured. Use + Add to attach more devices or areas."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Device Notes",
-        "description": "Choose devices and/or areas to attach a note log to. Every device in a selected area gets one automatically.",
-        "data": {
-          "devices": "Devices",
-          "areas": "Areas (all devices within them)"
+  "config_subentries": {
+    "device": {
+      "initiate_flow": { "user": "Add a device" },
+      "entry_type": "device",
+      "step": {
+        "user": {
+          "title": "Add a device",
+          "description": "Pick a device to attach a note log to.",
+          "data": { "device_id": "Device" }
+        }
+      }
+    },
+    "area": {
+      "initiate_flow": { "user": "Add an area" },
+      "entry_type": "area",
+      "step": {
+        "user": {
+          "title": "Add an area",
+          "description": "Attach a note log to every device in this area.",
+          "data": { "area_id": "Area" }
         }
       }
     }

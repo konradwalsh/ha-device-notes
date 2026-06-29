@@ -24,9 +24,11 @@ from .const import (
     ATTR_ENTITY_ID,
     ATTR_NOTE,
     ATTR_SOURCE,
+    ATTR_TS,
     DOMAIN,
     SERVICE_APPEND,
     SERVICE_CLEAR,
+    SERVICE_DELETE,
     SERVICE_DELETE_LAST,
     SOURCE_AGENT,
 )
@@ -46,6 +48,7 @@ APPEND_SCHEMA = vol.Schema(
         vol.Optional(ATTR_SOURCE): cv.string,
     }
 )
+DELETE_SCHEMA = vol.Schema({**_TARGET_FIELDS, vol.Required(ATTR_TS): cv.string})
 
 
 def _resolve_device_id(hass: HomeAssistant, data: dict) -> str:
@@ -101,15 +104,29 @@ async def async_setup_services(hass: HomeAssistant, store: DeviceNotesStore) -> 
             return
         await store.async_delete_last(key)
 
+    async def _delete(call: ServiceCall) -> None:
+        device_id = _resolve_device_id(hass, call.data)
+        key = store.key_for_device_id(device_id)
+        if key is None:
+            _LOGGER.warning("Service delete: device %s has no notes", device_id)
+            return
+        await store.async_delete_at(key, call.data[ATTR_TS])
+
     hass.services.async_register(DOMAIN, SERVICE_APPEND, _append, schema=APPEND_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_CLEAR, _clear, schema=TARGET_SCHEMA)
     hass.services.async_register(
         DOMAIN, SERVICE_DELETE_LAST, _delete_last, schema=TARGET_SCHEMA
     )
+    hass.services.async_register(DOMAIN, SERVICE_DELETE, _delete, schema=DELETE_SCHEMA)
     _LOGGER.debug("Registered device_notes services")
 
 
 def async_unload_services(hass: HomeAssistant) -> None:
     """Remove the device_notes services."""
-    for service in (SERVICE_APPEND, SERVICE_CLEAR, SERVICE_DELETE_LAST):
+    for service in (
+        SERVICE_APPEND,
+        SERVICE_CLEAR,
+        SERVICE_DELETE_LAST,
+        SERVICE_DELETE,
+    ):
         hass.services.async_remove(DOMAIN, service)

@@ -18,7 +18,7 @@ from homeassistant.util import dt as dt_util
 
 from . import notelog
 from .const import DOMAIN, MAX_ENTRY_CHARS, SOURCE_USER
-from .selection import effective_device_ids
+from .selection import devices_for_subentry
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -39,25 +39,26 @@ async def async_setup_entry(
     store: DeviceNotesStore = hass.data[DOMAIN]["store"]
     dev_reg = dr.async_get(hass)
 
-    entities: list[DeviceNotesEntryText] = []
-    for device_id in effective_device_ids(hass, entry):
-        device = dev_reg.async_get(device_id)
-        if device is None:
-            continue
-        name = device.name_by_user or device.name
-        key = await store.async_ensure(
-            device_id=device_id, identifiers=device.identifiers, name=name
-        )
-        text_entity = DeviceNotesEntryText(
-            store, key, device_id, device.identifiers, device.connections, name
-        )
-        # Force a clean entity_id; newer HA otherwise folds the area name in.
-        text_entity.entity_id = async_generate_entity_id(
-            ENTITY_ID_FORMAT, f"{name or device_id} Note entry", hass=hass
-        )
-        entities.append(text_entity)
-
-    async_add_entities(entities)
+    for subentry_id, subentry in entry.subentries.items():
+        entities: list[DeviceNotesEntryText] = []
+        for device_id in devices_for_subentry(hass, subentry):
+            device = dev_reg.async_get(device_id)
+            if device is None:
+                continue
+            name = device.name_by_user or device.name
+            key = await store.async_ensure(
+                device_id=device_id, identifiers=device.identifiers, name=name
+            )
+            text_entity = DeviceNotesEntryText(
+                store, key, device_id, device.identifiers, device.connections, name
+            )
+            # Force a clean entity_id; newer HA otherwise folds the area name in.
+            text_entity.entity_id = async_generate_entity_id(
+                ENTITY_ID_FORMAT, f"{name or device_id} Note entry", hass=hass
+            )
+            entities.append(text_entity)
+        if entities:
+            async_add_entities(entities, config_subentry_id=subentry_id)
 
 
 class DeviceNotesEntryText(TextEntity):
@@ -65,7 +66,8 @@ class DeviceNotesEntryText(TextEntity):
 
     _attr_has_entity_name = True
     _attr_name = "Note entry"
-    _attr_entity_category = EntityCategory.CONFIG
+    # DIAGNOSTIC to group with the Notes sensor + buttons in one device-page section.
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:note-plus-outline"
     _attr_mode = TextMode.TEXT
     _attr_native_min = 0

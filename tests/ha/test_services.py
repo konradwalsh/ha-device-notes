@@ -8,6 +8,7 @@ from custom_components.device_notes.const import (
     DOMAIN,
     SERVICE_APPEND,
     SERVICE_CLEAR,
+    SERVICE_DELETE,
     SERVICE_DELETE_LAST,
 )
 from custom_components.device_notes.services import async_setup_services
@@ -114,3 +115,30 @@ async def test_delete_last_service_removes_newest(hass):
 
     key = store.key_for_device_id(device.id)
     assert [e["text"] for e in store.data["devices"][key]["log"]] == ["old"]
+
+
+async def test_delete_service_removes_a_specific_entry(hass):
+    _, device = _add_device(hass)
+    store = await _setup(hass)
+    await store.async_append(
+        device_id=device.id,
+        identifiers=device.identifiers,
+        name="Demo",
+        entry={"ts": "2026-01-01T00:00:01", "source": "agent", "text": "first"},
+    )
+    await store.async_append(
+        device_id=device.id,
+        identifiers=device.identifiers,
+        name="Demo",
+        entry={"ts": "2026-01-01T00:00:02", "source": "agent", "text": "second"},
+    )
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_DELETE,
+        {"device_id": device.id, "ts": "2026-01-01T00:00:01"},
+        blocking=True,
+    )
+
+    key = store.key_for_device_id(device.id)
+    assert [e["text"] for e in store.data["devices"][key]["log"]] == ["second"]

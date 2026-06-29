@@ -103,6 +103,13 @@ class DeviceNotesStore:
         _LOGGER.debug("Deleted last note for key %s", key)
         async_dispatcher_send(self._hass, SIGNAL_NOTES_UPDATED, key)
 
+    async def async_delete_at(self, key: str, ts: str) -> None:
+        """Remove a specific entry (by ts) from a record and persist."""
+        self._data = model.delete_note_at(self._data, key, ts)
+        await self._async_save()
+        _LOGGER.debug("Deleted note %s for key %s", ts, key)
+        async_dispatcher_send(self._hass, SIGNAL_NOTES_UPDATED, key)
+
     async def async_relink(
         self, current_device_id_for: Callable[[Iterable], str | None]
     ) -> None:

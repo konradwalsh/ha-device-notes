@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 CARD_URL = f"/{DOMAIN}/device-notes-card.js"
 _CARD_REGISTERED = f"{DOMAIN}_card_registered"
 
-PLATFORMS: list[str] = ["sensor", "text"]
+PLATFORMS: list[str] = ["sensor", "text", "button"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

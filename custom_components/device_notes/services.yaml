@@ -65,3 +65,27 @@ delete_last:
       required: false
       selector:
         entity: {}
+
+delete:
+  name: Delete a note
+  description: Remove a specific note entry by its timestamp.
+  fields:
+    device_id:
+      name: Device
+      description: Target device. Provide this or entity_id.
+      required: false
+      selector:
+        device: {}
+    entity_id:
+      name: Entity
+      description: Any entity on the target device; resolved to its device.
+      required: false
+      selector:
+        entity: {}
+    ts:
+      name: Timestamp
+      description: The ts of the entry to remove (copy it from the log).
+      required: true
+      example: "2026-06-28T22:04:12+01:00"
+      selector:
+        text: {}

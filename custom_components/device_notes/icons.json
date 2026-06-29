@@ -1,0 +1,8 @@
+{
+  "services": {
+    "append": { "service": "mdi:note-plus-outline" },
+    "clear": { "service": "mdi:notification-clear-all" },
+    "delete_last": { "service": "mdi:undo-variant" },
+    "delete": { "service": "mdi:note-remove-outline" }
+  }
+}
