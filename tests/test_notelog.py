@@ -97,19 +97,27 @@ def test_preview_is_empty_for_empty_log():
     assert notelog.preview([]) == ""
 
 
-def test_preview_shows_latest_entry_text_and_timestamp():
+def test_preview_shows_latest_text_only():
     log = [{"ts": "2026-01-02T09:30:00", "source": "agent", "text": "fixed boiler"}]
 
     result = notelog.preview(log)
 
-    assert "fixed boiler" in result
-    assert "2026-01-02T09:30:00" in result
+    assert result == "fixed boiler"  # short, single-line, no timestamp noise
 
 
-def test_preview_truncated_to_state_limit():
-    log = [{"ts": "2026-01-02T09:30:00", "source": "agent", "text": "x" * 255}]
+def test_preview_collapses_newlines_and_whitespace():
+    log = [{"ts": "t", "source": "agent", "text": "line one\n  line   two\tend"}]
 
-    assert len(notelog.preview(log)) <= const.MAX_STATE_CHARS
+    assert notelog.preview(log) == "line one line two end"
+
+
+def test_preview_truncates_long_text_with_ellipsis():
+    log = [{"ts": "t", "source": "agent", "text": "x" * 255}]
+
+    result = notelog.preview(log)
+
+    assert len(result) <= const.MAX_PREVIEW_CHARS
+    assert result.endswith("…")
 
 
 def test_delete_at_removes_the_entry_with_matching_ts():

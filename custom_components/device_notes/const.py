@@ -60,7 +60,8 @@ ATTR_NOTE = "note"
 MAX_ENTRIES = 50  # keep the newest N entries
 MAX_LOG_BYTES = 8 * 1024  # prune oldest beyond ~8 KB total
 MAX_ENTRY_CHARS = 255  # HA text entity hard limit, one line per entry
-MAX_STATE_CHARS = 255  # HA state-string hard limit (sensor preview)
+MAX_STATE_CHARS = 255  # HA state-string hard ceiling
+MAX_PREVIEW_CHARS = 80  # sensor state preview: short, fits the device-page cell
 
 # --- Dispatcher signals ---------------------------------------------------
 # Fired with the record key whenever a device's log changes, so its entities

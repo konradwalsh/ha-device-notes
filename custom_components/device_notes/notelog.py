@@ -16,7 +16,7 @@ from .const import (
     MAX_ENTRIES,
     MAX_ENTRY_CHARS,
     MAX_LOG_BYTES,
-    MAX_STATE_CHARS,
+    MAX_PREVIEW_CHARS,
 )
 
 
@@ -91,8 +91,15 @@ def delete_at(log: list[dict], ts: str) -> list[dict]:
 
 
 def preview(log: list[dict]) -> str:
-    """One-line sensor state: newest entry's text + ts, capped at the state limit."""
+    """Short, single-line sensor state for the device-page cell.
+
+    Newest entry's text with whitespace/newlines collapsed and truncated with an
+    ellipsis, so a long note can't sprawl down the device page. The full text
+    stays in the ``log`` attribute and the card.
+    """
     if not log:
         return ""
-    latest = log[0]
-    return f"{latest['text']} ({latest['ts']})"[:MAX_STATE_CHARS]
+    text = " ".join(log[0]["text"].split())
+    if len(text) > MAX_PREVIEW_CHARS:
+        text = text[: MAX_PREVIEW_CHARS - 1].rstrip() + "…"
+    return text
