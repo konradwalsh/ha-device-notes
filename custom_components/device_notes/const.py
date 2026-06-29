@@ -41,9 +41,15 @@ ISSUE_SEVERITIES = frozenset({SEVERITY_WARNING, SEVERITY_ERROR})
 
 # --- Service names --------------------------------------------------------
 SERVICE_APPEND = "append"
+SERVICE_GET = "get"
 SERVICE_CLEAR = "clear"
 SERVICE_DELETE_LAST = "delete_last"
 SERVICE_DELETE = "delete"
+
+# --- get response keys ----------------------------------------------------
+ATTR_NOTES = "notes"
+ATTR_COUNT = "count"
+ATTR_ISSUES = "issues"
 
 # --- Service fields -------------------------------------------------------
 ATTR_DEVICE_ID = "device_id"

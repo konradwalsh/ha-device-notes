@@ -11,6 +11,7 @@ from custom_components.device_notes.const import (
     SERVICE_CLEAR,
     SERVICE_DELETE,
     SERVICE_DELETE_LAST,
+    SERVICE_GET,
 )
 from custom_components.device_notes.services import async_setup_services
 from custom_components.device_notes.store import DeviceNotesStore
@@ -139,6 +140,52 @@ async def test_append_fires_note_added_event(hass):
     assert data["device_id"] == device.id
     assert data["text"] == "leak detected"
     assert data["severity"] == "warning"
+
+
+async def test_get_returns_notes_with_counts(hass):
+    _, device = _add_device(hass)
+    await _setup(hass)
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_APPEND,
+        {"device_id": device.id, "note": "all good"},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_APPEND,
+        {"device_id": device.id, "note": "leak", "severity": "error"},
+        blocking=True,
+    )
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_GET,
+        {"device_id": device.id},
+        blocking=True,
+        return_response=True,
+    )
+
+    assert response["count"] == 2
+    assert response["issues"] == 1
+    # newest-first
+    assert response["notes"][0]["text"] == "leak"
+    assert response["notes"][0]["severity"] == "error"
+
+
+async def test_get_unknown_device_returns_empty(hass):
+    _, device = _add_device(hass)
+    await _setup(hass)
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_GET,
+        {"device_id": device.id},
+        blocking=True,
+        return_response=True,
+    )
+
+    assert response == {"notes": [], "count": 0, "issues": 0}
 
 
 async def test_clear_service_empties_the_log(hass):

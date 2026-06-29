@@ -11,7 +11,12 @@ from __future__ import annotations
 import logging
 
 import voluptuous as vol
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+)
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
@@ -21,9 +26,12 @@ from homeassistant.util import dt as dt_util
 from . import notelog
 from .const import (
     ATTR_CATEGORY,
+    ATTR_COUNT,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
+    ATTR_ISSUES,
     ATTR_NOTE,
+    ATTR_NOTES,
     ATTR_SEVERITY,
     ATTR_SOURCE,
     ATTR_TS,
@@ -33,6 +41,7 @@ from .const import (
     SERVICE_CLEAR,
     SERVICE_DELETE,
     SERVICE_DELETE_LAST,
+    SERVICE_GET,
     SEVERITIES,
     SOURCE_AGENT,
 )
@@ -104,6 +113,24 @@ async def async_setup_services(hass: HomeAssistant, store: DeviceNotesStore) -> 
             severity,
         )
 
+    async def _get(call: ServiceCall) -> ServiceResponse:
+        """Return a device's notes (newest-first) plus count + issue count.
+
+        Read-only; lets an AI agent pull a device's history in one call instead
+        of scraping the sensor's state attributes.
+        """
+        device_id = _resolve_device_id(hass, call.data)
+        key = store.key_for_device_id(device_id)
+        if key is None:
+            return {ATTR_NOTES: [], ATTR_COUNT: 0, ATTR_ISSUES: 0}
+        log = store.data["devices"][key]["log"]
+        _LOGGER.debug("Service get: device=%s returned %d note(s)", device_id, len(log))
+        return {
+            ATTR_NOTES: log,
+            ATTR_COUNT: len(log),
+            ATTR_ISSUES: notelog.issue_count(log),
+        }
+
     async def _clear(call: ServiceCall) -> None:
         device_id = _resolve_device_id(hass, call.data)
         key = store.key_for_device_id(device_id)
@@ -131,6 +158,13 @@ async def async_setup_services(hass: HomeAssistant, store: DeviceNotesStore) -> 
         await store.async_delete_at(key, call.data[ATTR_TS])
 
     hass.services.async_register(DOMAIN, SERVICE_APPEND, _append, schema=APPEND_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET,
+        _get,
+        schema=TARGET_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
     hass.services.async_register(DOMAIN, SERVICE_CLEAR, _clear, schema=TARGET_SCHEMA)
     hass.services.async_register(
         DOMAIN, SERVICE_DELETE_LAST, _delete_last, schema=TARGET_SCHEMA
@@ -143,6 +177,7 @@ def async_unload_services(hass: HomeAssistant) -> None:
     """Remove the device_notes services."""
     for service in (
         SERVICE_APPEND,
+        SERVICE_GET,
         SERVICE_CLEAR,
         SERVICE_DELETE_LAST,
         SERVICE_DELETE,

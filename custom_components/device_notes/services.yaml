@@ -50,6 +50,25 @@ append:
             - warning
             - error
 
+get:
+  name: Get notes
+  description: >-
+    Return a device's note log (newest-first) plus its total and issue counts.
+    Read-only; ideal for an AI agent to read a device's history in one call.
+  fields:
+    device_id:
+      name: Device
+      description: Target device. Provide this or entity_id.
+      required: false
+      selector:
+        device: {}
+    entity_id:
+      name: Entity
+      description: Any entity on the target device; resolved to its device.
+      required: false
+      selector:
+        entity: {}
+
 clear:
   name: Clear notes
   description: Delete the entire note log for a device.
