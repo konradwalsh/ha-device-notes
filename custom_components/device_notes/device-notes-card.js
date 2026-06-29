@@ -258,8 +258,23 @@ class DeviceNotesCard extends HTMLElement {
     return 1 + Math.min(log.length, 6);
   }
 
-  static getStubConfig() {
-    return { entity: "" };
+  static getConfigElement() {
+    return document.createElement("device-notes-card-editor");
+  }
+
+  static getStubConfig(hass) {
+    // Pre-fill with an existing notes sensor so the card works immediately.
+    const states = (hass && hass.states) || {};
+    const candidates = Object.keys(states).filter(
+      (id) =>
+        id.startsWith("sensor.") &&
+        id.endsWith("_notes") &&
+        Array.isArray(states[id].attributes.log)
+    );
+    const entity = candidates.length
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : "";
+    return { entity };
   }
 
   _styles() {
@@ -338,11 +353,66 @@ class DeviceNotesCard extends HTMLElement {
 
 customElements.define("device-notes-card", DeviceNotesCard);
 
+/**
+ * Visual config editor — a small ha-form so the card is configurable from the
+ * UI (entity picker + optional title) instead of YAML-only.
+ */
+class DeviceNotesCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config;
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.computeLabel = (schema) =>
+        ({ entity: "Notes sensor", title: "Title (optional)" }[schema.name] ||
+          schema.name);
+      this._form.computeHelper = (schema) =>
+        schema.name === "entity"
+          ? "Pick a device's Notes sensor (sensor.<device>_notes)."
+          : "";
+      this._form.addEventListener("value-changed", (ev) => {
+        ev.stopPropagation();
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config: ev.detail.value },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      });
+      this.appendChild(this._form);
+    }
+    this._form.hass = this._hass;
+    this._form.schema = [
+      {
+        name: "entity",
+        required: true,
+        selector: { entity: { integration: "device_notes", domain: "sensor" } },
+      },
+      { name: "title", selector: { text: {} } },
+    ];
+    this._form.data = this._config;
+  }
+}
+
+customElements.define("device-notes-card-editor", DeviceNotesCardEditor);
+
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "device-notes-card",
   name: "Device Notes Card",
   description: "Shows a device's append-only note log (with a built-in tutorial).",
+  preview: true,
+  documentationURL: "https://github.com/konradwalsh/ha-device-notes",
 });
 
 console.info(
