@@ -190,15 +190,16 @@ class DeviceNotesCard extends HTMLElement {
 
   _panels() {
     const devicePage = `
-      <p>Each opted-in device gets two entities on its own page:</p>
+      <p>Each opted-in device gets a grouped set of entities on its own page:</p>
       <div class="dn-mock">
         <div class="dn-mock-title">Living Room TRV</div>
         <div class="dn-mock-row"><span>Notes</span>
           <span class="dn-mock-val">Boiler serviced (today 08:00)</span></div>
-        <div class="dn-mock-row"><span>Note entry</span>
+        <div class="dn-mock-row"><span>Notes: new entry</span>
           <span class="dn-mock-input">Type a line, press Enter…</span></div>
       </div>
-      <p class="dn-cap"><b>Notes</b> shows the log; <b>Note entry</b> adds a line.</p>`;
+      <p class="dn-cap"><b>Notes</b> shows the log; <b>Notes: new entry</b> adds a
+      line. They share a "Notes" prefix so they sit together.</p>`;
 
     const adding = `
       <p>Two ways to add a note:</p>

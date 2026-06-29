@@ -65,7 +65,9 @@ class DeviceNotesEntryText(TextEntity):
     """An input box that appends a user line to the device's note log."""
 
     _attr_has_entity_name = True
-    _attr_name = "Note entry"
+    # Shared "Notes:" prefix clusters all our entities together in the sorted
+    # device-page section.
+    _attr_name = "Notes: new entry"
     # DIAGNOSTIC to group with the Notes sensor + buttons in one device-page section.
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:note-plus-outline"

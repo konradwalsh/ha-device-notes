@@ -78,7 +78,9 @@ class _DeviceNotesButton(ButtonEntity):
 class DeleteLastNoteButton(_DeviceNotesButton):
     """Remove the most recent note."""
 
-    _attr_name = "Delete last note"
+    # Shared "Notes:" prefix so all our entities cluster together in the
+    # device page's (alphabetically sorted) Diagnostic section.
+    _attr_name = "Notes: delete last"
     _attr_icon = "mdi:undo-variant"
 
     def __init__(self, store, key, identifiers, connections) -> None:
@@ -92,7 +94,7 @@ class DeleteLastNoteButton(_DeviceNotesButton):
 class ClearNotesButton(_DeviceNotesButton):
     """Wipe the whole log."""
 
-    _attr_name = "Clear notes"
+    _attr_name = "Notes: clear all"
     _attr_icon = "mdi:notification-clear-all"
 
     def __init__(self, store, key, identifiers, connections) -> None:

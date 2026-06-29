@@ -135,7 +135,7 @@ class DeviceNotesIssuesSensor(SensorEntity):
     """Count of open issues (notes with warning/error severity) on a device."""
 
     _attr_has_entity_name = True
-    _attr_name = "Note issues"
+    _attr_name = "Notes: issues"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:alert-circle-outline"
     _attr_state_class = SensorStateClass.MEASUREMENT
