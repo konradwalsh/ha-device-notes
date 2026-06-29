@@ -1,0 +1,4 @@
+# Pinned so CI reproduces the known-good local suite exactly (this single pin
+# pulls a matching homeassistant, pytest, pytest-asyncio, pytest-aiohttp).
+pytest-homeassistant-custom-component==0.13.236
+ruff==0.15.12
