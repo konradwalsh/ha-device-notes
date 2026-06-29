@@ -33,6 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Home Assistant for the pure-logic unit tests.
     from homeassistant.helpers import device_registry as dr
 
+    from .intent import async_setup_intents
     from .services import async_setup_services
     from .store import DeviceNotesStore
 
@@ -53,6 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["store"] = store
 
     await async_setup_services(hass, store)
+    async_setup_intents(hass)
     await _async_register_card(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -124,10 +126,12 @@ async def _async_register_card(hass: HomeAssistant) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    from .intent import async_remove_intents
     from .services import async_unload_services
 
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         async_unload_services(hass)
+        async_remove_intents(hass)
         hass.data.pop(DOMAIN, None)
     return unloaded
