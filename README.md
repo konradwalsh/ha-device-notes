@@ -108,6 +108,11 @@ It renders the full log newest-first with source badges (agent/user) and
 timestamps, an **add-a-note** box, a per-row delete, and a **"?"** button with a
 built-in walkthrough — all themed to your dashboard.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). The project uses Home Assistant calendar
+versioning (`YYYY.M.PATCH`); each GitHub release mirrors a changelog entry.
+
 ## Development
 
 - Pure logic (note-log + device-link) is Home-Assistant-free and tested with plain
