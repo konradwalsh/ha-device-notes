@@ -43,7 +43,7 @@ class DeviceNotesCard extends HTMLElement {
     this._lastLogJson = logJson;
     this._rendered = true;
 
-    const title = this._config.title ?? "Notes";
+    const title = this._titleFor();
     let body;
     if (!stateObj) {
       body = `<div class="dn-empty">Entity <code>${this._esc(
@@ -240,6 +240,30 @@ class DeviceNotesCard extends HTMLElement {
   }
 
   // --- helpers -------------------------------------------------------------
+
+  _titleFor() {
+    const explicit = (this._config.title ?? "").trim();
+    if (explicit) return explicit;
+    const name = this._deviceName();
+    return name ? `Device Notes for ${name}` : "Notes";
+  }
+
+  _deviceName() {
+    const hass = this._hass;
+    const id = this._config && this._config.entity;
+    if (!hass || !id) return null;
+    const ent = hass.entities && hass.entities[id];
+    if (ent && ent.device_id && hass.devices) {
+      const dev = hass.devices[ent.device_id];
+      if (dev && (dev.name_by_user || dev.name)) {
+        return dev.name_by_user || dev.name;
+      }
+    }
+    // Fallback: strip the trailing " Notes" from the sensor's friendly name.
+    const state = hass.states[id];
+    const fn = state && state.attributes.friendly_name;
+    return fn ? fn.replace(/\s+Notes$/i, "") : null;
+  }
 
   _esc(s) {
     const d = document.createElement("div");
